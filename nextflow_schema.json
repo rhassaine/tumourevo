@@ -133,6 +133,23 @@
             },
             "fa_icon": "fas fa-briefcase"
         },
+        "cna2cnaqc": {
+            "title": "CNA2CNAqc",
+            "type": "object",
+            "description": "Parameters for converting copy number calls to CNAqc input.",
+            "default": "",
+            "properties": {
+                "purple_max_cn_deviation": {
+                    "type": "number",
+                    "default": 0.25,
+                    "minimum": 0,
+                    "maximum": 0.5,
+                    "description": "PURPLE input only: segments where an allele copy number is further than this from an integer are removed instead of rounded.",
+                    "help_text": "PURPLE reports continuous allele copy numbers. Segments far from an integer usually reflect subclonal copy number, which cannot be represented as a clonal karyotype; rounding them gives their mutations the wrong copy number in CNAqc, PyClone-VI and MOBSTER. The default of 0.25 matches the distance PURPLE uses for its `polyclonalProportion`. Set to 0.5 to keep every segment (rounding only)."
+                }
+            },
+            "fa_icon": "fas fa-briefcase"
+        },
         "cnaqc": {
             "title": "CNAqc",
             "type": "object",
@@ -563,6 +580,9 @@
         },
         {
             "$ref": "#/$defs/vcf2cnaqc"
+        },
+        {
+            "$ref": "#/$defs/cna2cnaqc"
         },
         {
             "$ref": "#/$defs/cnaqc"
