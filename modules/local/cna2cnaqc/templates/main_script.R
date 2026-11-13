@@ -106,8 +106,14 @@ parse_PURPLE = function(segments_file, extra_file, max_deviation = 0.25){
     # Segments where an allele copy number is far from an integer (subclonal or noisy copy
     # number) cannot be represented as a clonal karyotype: rounding them assigns the wrong
     # copy number to their mutations downstream, so they are removed instead of rounded.
-    # The default threshold of 0.25 matches the distance PURPLE itself uses to call a
-    # segment polyclonal (polyclonalProportion in purple.purity.tsv).
+    # The default threshold of 0.25 uses the same numerical cutoff reported by PURPLE's
+    # polyclonalProportion. This downstream rule is deliberately conservative: it is
+    # applied to either allele and does not reproduce PURPLE's confidence weighting.
+    if (length(max_deviation) != 1 || is.na(max_deviation) ||
+        max_deviation < 0 || max_deviation > 0.5) {
+        stop("PURPLE maximum copy-number deviation must be a number between 0 and 0.5.")
+    }
+
     segments = readr::read_tsv(segments_file, col_types = readr::cols()) %>%
         dplyr::mutate(
             chr = chromosome,
@@ -117,6 +123,10 @@ parse_PURPLE = function(segments_file, extra_file, max_deviation = 0.25){
             minor = as.integer(round(minorAlleleCopyNumber)),
             deviation = pmax(abs(majorAlleleCopyNumber - Major), abs(minorAlleleCopyNumber - minor))) %>%
         dplyr::filter(!is.na(Major), !is.na(minor), Major >= 0, minor >= 0)
+
+    if (nrow(segments) == 0) {
+        stop("No valid non-negative PURPLE copy-number segments were found.")
+    }
 
     off_integer = segments[["deviation"]] > max_deviation
     segment_bp = segments[["to"]] - segments[["from"]] + 1
@@ -136,18 +146,20 @@ parse_PURPLE = function(segments_file, extra_file, max_deviation = 0.25){
     purity = solutions[["purity"]][1]
     ploidy = solutions[["ploidy"]][1]
 
-    # PURPLE fit method: NORMAL, HIGHLY_DIPLOID, SOMATIC or NO_TUMOR. The full QC verdict
-    # (QCStatus) is in <tumour>.purple.qc, which is not an input; check it separately.
-    fit_status = solutions[["status"]][1]
-    if (!is.null(fit_status) && !is.na(fit_status)) {
-        if (fit_status == "NO_TUMOR") {
-            stop("PURPLE fit status is NO_TUMOR: no tumour was detected, so its copy number cannot be used.")
+    # purple.purity.tsv stores the QC result in status (PASS, WARN_* and FAIL_*).
+    # The fit method (NORMAL, HIGHLY_DIPLOID, SOMATIC or NO_TUMOR) is available only in
+    # purple.qc, which is not an input here.
+    qc_status = solutions[["status"]][1]
+    if (!is.null(qc_status) && !is.na(qc_status)) {
+        if (grepl("FAIL_NO_TUMOR", qc_status, fixed = TRUE)) {
+            stop("PURPLE QC status contains FAIL_NO_TUMOR: no tumour was detected, so its copy number cannot be used.")
         }
-        if (fit_status != "NORMAL") {
-            warning("PURPLE fit status is ", fit_status, "; purity, ploidy and copy number may be unreliable.")
+        if (qc_status != "PASS") {
+            warning("PURPLE QC status is ", qc_status, "; purity, ploidy and copy number may be unreliable.")
         }
     }
-    if (!is.na(purity) && purity < 0.2) {
+    if (!is.na(purity) && purity < 0.2 &&
+        (is.null(qc_status) || is.na(qc_status) || !grepl("WARN_LOW_PURITY", qc_status, fixed = TRUE))) {
         warning("PURPLE purity is ", purity, ", below 0.2 (PURPLE QC: WARN_LOW_PURITY).")
     }
 

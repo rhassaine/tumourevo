@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Support for Hartwig WiGiTS / oncoanalyser somatic outputs: SAGE/PURPLE somatic VCFs in `vcf2cnaqc` and PURPLE copy number (`purple.cnv.somatic.tsv`, `purple.purity.tsv`, `cna_caller` `PURPLE`) in `cna2cnaqc`.
 
-- PURPLE input: segments with an allele copy number more than `--purple_max_cn_deviation` (default 0.25) from an integer are removed instead of rounded, so subclonal copy number no longer gives mutations a wrong clonal karyotype in CNAqc, PyClone-VI and MOBSTER; `cna2cnaqc` stops on a PURPLE `NO_TUMOR` fit and warns on other non-`NORMAL` fits or purity below 0.2.
+- PURPLE input: as a conservative compatibility filter for downstream tools requiring integer clonal karyotypes, segments with an allele copy number more than `--purple_max_cn_deviation` (default 0.25) from an integer are removed instead of rounded; `cna2cnaqc` stops on a `FAIL_NO_TUMOR` QC status and warns on other non-`PASS` statuses or purity below 0.2.
 
 - Test profile: set `sparsesignatures_k` (it was spelled `sparsesignatures_K`, which the pipeline does not read), so `SPARSE_SIGNATURES` runs with the intended `K = 2:3` instead of the default `3:10` ([#92](https://github.com/nf-core/tumourevo/issues/92))
 

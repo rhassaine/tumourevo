@@ -145,7 +145,7 @@
                     "minimum": 0,
                     "maximum": 0.5,
                     "description": "PURPLE input only: segments where an allele copy number is further than this from an integer are removed instead of rounded.",
-                    "help_text": "PURPLE reports continuous allele copy numbers. Segments far from an integer usually reflect subclonal copy number, which cannot be represented as a clonal karyotype; rounding them gives their mutations the wrong copy number in CNAqc, PyClone-VI and MOBSTER. The default of 0.25 matches the distance PURPLE uses for its `polyclonalProportion`. Set to 0.5 to keep every segment (rounding only)."
+                    "help_text": "PURPLE reports continuous allele copy numbers, while CNAqc, PyClone-VI and MOBSTER consume integer clonal karyotypes. This conservative compatibility filter removes segments that cannot be assigned an integer karyotype without substantial rounding. The default 0.25 uses the same numerical cutoff as PURPLE's `polyclonalProportion`, but is applied per allele and does not reproduce PURPLE's confidence weighting. Set to 0.5 to keep every segment (rounding only)."
                 }
             },
             "fa_icon": "fas fa-briefcase"

@@ -1,0 +1,79 @@
+nextflow_process {
+
+    name "Test Process CNA2CNAQC"
+    tag "modules"
+    tag "modules_local"
+    tag "cna2cnaqc"
+    script "../main.nf"
+    process "CNA2CNAQC"
+
+    test("PURPLE PASS removes off-integer segments without a QC warning") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [id: 'pass', cna_caller: 'PURPLE'],
+                    file("${projectDir}/tests/data/purple.cnv.somatic.tsv", checkIfExists: true),
+                    file("${projectDir}/tests/data/pass.purple.purity.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def output = path(process.out.rds.get(0).get(1))
+            def commandErr = output.parent.resolve('.command.err').text
+            assertAll(
+                { assert process.success },
+                { assert commandErr.contains("PURPLE: removing 1 of 2 segments") },
+                { assert !commandErr.contains("PURPLE QC status is") }
+            )
+        }
+    }
+
+    test("PURPLE warning status is reported once") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [id: 'warn', cna_caller: 'PURPLE'],
+                    file("${projectDir}/tests/data/purple.cnv.somatic.tsv", checkIfExists: true),
+                    file("${projectDir}/tests/data/warn.purple.purity.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def output = path(process.out.rds.get(0).get(1))
+            def commandErr = output.parent.resolve('.command.err').text
+            assertAll(
+                { assert process.success },
+                { assert commandErr.count("WARN_LOW_PURITY") == 1 },
+                { assert commandErr.contains("PURPLE QC status is WARN_LOW_PURITY") }
+            )
+        }
+    }
+
+    test("PURPLE FAIL_NO_TUMOR stops the process") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [id: 'fail', cna_caller: 'PURPLE'],
+                    file("${projectDir}/tests/data/purple.cnv.somatic.tsv", checkIfExists: true),
+                    file("${projectDir}/tests/data/fail.purple.purity.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.failed
+            assert process.errorReport.contains("PURPLE QC status contains FAIL_NO_TUMOR")
+        }
+    }
+}
