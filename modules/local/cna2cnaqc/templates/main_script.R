@@ -146,20 +146,23 @@ parse_PURPLE = function(segments_file, extra_file, max_deviation = 0.25){
     purity = solutions[["purity"]][1]
     ploidy = solutions[["ploidy"]][1]
 
-    # purple.purity.tsv stores the QC result in status (PASS, WARN_* and FAIL_*).
-    # The fit method (NORMAL, HIGHLY_DIPLOID, SOMATIC or NO_TUMOR) is available only in
-    # purple.qc, which is not an input here.
-    qc_status = solutions[["status"]][1]
-    if (!is.null(qc_status) && !is.na(qc_status)) {
-        if (grepl("FAIL_NO_TUMOR", qc_status, fixed = TRUE)) {
-            stop("PURPLE QC status contains FAIL_NO_TUMOR: no tumour was detected, so its copy number cannot be used.")
+    # PURPLE purity files in the wild use two status vocabularies. Older outputs store
+    # the fit method (NORMAL, HIGHLY_DIPLOID, SOMATIC or NO_TUMOR), while newer outputs
+    # store a QC result (PASS, WARN_* or FAIL_*). Accept both representations.
+    status = solutions[["status"]][1]
+    fit_methods = c("NORMAL", "HIGHLY_DIPLOID", "SOMATIC", "NO_TUMOR")
+    if (!is.null(status) && !is.na(status)) {
+        if (status == "NO_TUMOR" || grepl("FAIL_NO_TUMOR", status, fixed = TRUE)) {
+            stop("PURPLE status indicates that no tumour was detected, so its copy number cannot be used: ", status)
         }
-        if (qc_status != "PASS") {
-            warning("PURPLE QC status is ", qc_status, "; purity, ploidy and copy number may be unreliable.")
+        if (status %in% fit_methods && status != "NORMAL") {
+            warning("PURPLE fit method is ", status, "; purity, ploidy and copy number may be unreliable.")
+        } else if (!(status %in% fit_methods) && status != "PASS") {
+            warning("PURPLE QC status is ", status, "; purity, ploidy and copy number may be unreliable.")
         }
     }
     if (!is.na(purity) && purity < 0.2 &&
-        (is.null(qc_status) || is.na(qc_status) || !grepl("WARN_LOW_PURITY", qc_status, fixed = TRUE))) {
+        (is.null(status) || is.na(status) || !grepl("WARN_LOW_PURITY", status, fixed = TRUE))) {
         warning("PURPLE purity is ", purity, ", below 0.2 (PURPLE QC: WARN_LOW_PURITY).")
     }
 

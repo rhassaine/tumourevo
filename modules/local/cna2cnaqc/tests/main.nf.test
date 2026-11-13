@@ -57,6 +57,31 @@ nextflow_process {
         }
     }
 
+    test("PURPLE legacy NORMAL fit method does not warn") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [id: 'normal', cna_caller: 'PURPLE'],
+                    file("${projectDir}/tests/data/purple.cnv.somatic.tsv", checkIfExists: true),
+                    file("${projectDir}/tests/data/normal.purple.purity.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            def output = path(process.out.rds.get(0).get(1))
+            def commandErr = output.parent.resolve('.command.err').text
+            assertAll(
+                { assert process.success },
+                { assert !commandErr.contains("PURPLE fit method is") },
+                { assert !commandErr.contains("PURPLE QC status is") }
+            )
+        }
+    }
+
     test("PURPLE FAIL_NO_TUMOR stops the process") {
 
         when {
@@ -73,7 +98,27 @@ nextflow_process {
 
         then {
             assert process.failed
-            assert process.errorReport.contains("PURPLE QC status contains FAIL_NO_TUMOR")
+            assert process.errorReport.contains("PURPLE status indicates that no tumour was detected")
+        }
+    }
+
+    test("PURPLE legacy NO_TUMOR fit method stops the process") {
+
+        when {
+            process {
+                """
+                input[0] = [
+                    [id: 'no_tumor', cna_caller: 'PURPLE'],
+                    file("${projectDir}/tests/data/purple.cnv.somatic.tsv", checkIfExists: true),
+                    file("${projectDir}/tests/data/no_tumor.purple.purity.tsv", checkIfExists: true)
+                ]
+                """
+            }
+        }
+
+        then {
+            assert process.failed
+            assert process.errorReport.contains("PURPLE status indicates that no tumour was detected")
         }
     }
 }
